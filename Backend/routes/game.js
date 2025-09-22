@@ -4,10 +4,16 @@ const authMiddleware = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
-// protected routes
+// CREATE GAME
 router.post("/create", authMiddleware, createGame);
-router.post("/:id/join", authMiddleware, joinGame);
-router.get("/:id/state", authMiddleware, getGameState);
-router.post("/:id/claim", authMiddleware, claimWin);
+
+// JOIN GAME
+router.post("/join/:roomId", authMiddleware, joinGame);
+
+// GET GAME STATE
+router.get("/:roomId/state", authMiddleware, getGameState);
+
+// CLAIM WIN
+router.post("/:roomId/claim", authMiddleware, claimWin);
 
 module.exports = router;
