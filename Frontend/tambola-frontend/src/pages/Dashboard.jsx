@@ -24,7 +24,7 @@ const Dashboard = () => {
       console.log("Host ticket:", ticket);
 
       // Navigate to TambolaRoom page and pass ticket via state
-      navigate(`/game/${roomId}`, { state: { ticket } });
+      navigate(`/game/${roomId}`, { state: { ticket, userId: user.id } });
     } catch (err) {
       alert(err.response?.data?.error || "Failed to create game");
     }
@@ -47,7 +47,7 @@ const Dashboard = () => {
       console.log("Joined ticket:", ticket);
 
       // Navigate to TambolaRoom page, pass ticket via state
-      navigate(`/game/${game.roomId}`, { state: { ticket } });
+      navigate(`/game/${game.roomId}`, { state: { ticket, userId: user.id } });
     } catch (err) {
       alert(err.response?.data?.error || "Failed to join game");
     }

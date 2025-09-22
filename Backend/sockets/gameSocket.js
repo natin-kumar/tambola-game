@@ -9,9 +9,38 @@ module.exports = (io, socket) => {
     socket.join(roomId);
     console.log(`User ${userId} joined room ${roomId}`);
 
-    // Optionally send current game state
     const game = await Game.findOne({ roomId });
+
+    // if no host yet, set the first user as host
+    if (!game.host) {
+      game.host = userId;
+      await game.save();
+    }
+
     socket.emit("gameState", game);
+  });
+
+  // Host starts game
+  socket.on("startGame", async ({ roomId }) => {
+    const game = await Game.findOne({ roomId });
+    if (!game) return;
+
+    game.status = "started";
+    await game.save();
+
+    io.to(roomId).emit("gameState", game);
+  });
+
+  // Host resets game
+  socket.on("resetGame", async ({ roomId }) => {
+    const game = await Game.findOne({ roomId });
+    if (!game) return;
+
+    game.status = "waiting";
+    game.numbersCalled = [];
+    await game.save();
+
+    io.to(roomId).emit("gameState", game);
   });
 
   // Host calls a number

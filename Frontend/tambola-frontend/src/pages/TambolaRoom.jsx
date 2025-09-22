@@ -6,6 +6,7 @@ import Cardboard from "../components/CardBoard";
 import TicketGrid from "../components/TicketGrid";
 import PrizeButtons from "../components/PrizeButton";
 
+
 const SOCKET_URL = "http://localhost:4000"; // adjust if deployed
 const prizes = [
   "Early Five",
@@ -18,11 +19,12 @@ const prizes = [
 
 const socket = io(SOCKET_URL, { autoConnect: false });
 
-const TambolaRoom = ({ userId }) => {
+const TambolaRoom = () => {
   const { id: roomId } = useParams();
   const location = useLocation();
   const hostTicket = location.state?.ticket || [];
-
+  const userId = location.state?.userId;
+  console.log(userId, roomId, "locaionnn");
   // --- State ---
   const [boardNumbers, setBoardNumbers] = useState(
     Array.from({ length: 90 }, (_, i) => ({ value: i + 1, called: false }))
@@ -54,7 +56,8 @@ const TambolaRoom = ({ userId }) => {
 
     // Receive full game state
     socket.on("gameState", (game) => {
-      setIsHost(userId === game.host);
+      console.log("Game State:", game, "userId:", userId);
+      setIsHost(String(userId) === String(game.host));
       setGameStatus(game.status);
 
       // Load ticket for current user
@@ -110,6 +113,7 @@ const TambolaRoom = ({ userId }) => {
 
   // --- Event Handlers ---
   const handleStart = () => {
+    console.log(isHost,roomId,"hosttt")
     if (isHost) socket.emit("startGame", { roomId });
   };
 
@@ -123,8 +127,8 @@ const TambolaRoom = ({ userId }) => {
     const remaining = boardNumbers.filter((n) => !n.called);
     if (remaining.length === 0) return;
 
-    const randomNum = remaining[Math.floor(Math.random() * remaining.length)]
-      .value;
+    const randomNum =
+      remaining[Math.floor(Math.random() * remaining.length)].value;
     socket.emit("callNumber", { roomId, number: randomNum });
   };
 
