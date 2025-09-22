@@ -6,35 +6,48 @@ import { useNavigate } from "react-router-dom";
 const Dashboard = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [gameId, setGameId] = useState("");
+  const [roomId, setGameId] = useState("");
 
-//   const handleCreate = async () => {
-//     try {
-//       const res = await API.post("/game/create");
-//       navigate(`/game/${res.data.game._id}`); // go to TambolaRoom page
-//     } catch (err) {
-//       alert(err.response?.data?.error || "Failed to create game");
-//     }
-//   };
+  const handleCreate = async () => {
+    try {
+      // Call backend to create a new game
+      const res = await API.post("/game/create");
+      const game = res.data.game;
 
-    const handleCreate = async () => {
-  try {
-    // Mock a new game ID
-    const mockGameId = Math.floor(Math.random() * 1000000).toString();
-    
-    // Navigate to the TambolaRoom page
-    navigate(`/game/${mockGameId}`);
-  } catch (err) {
-    alert("Failed to create game");
-  }
-};
-        
+      if (!game) return alert("Failed to create game");
+
+      const { roomId } = game;
+      console.log("Game created:", game);
+
+      // Extract host ticket (host is always first in tickets array)
+      const ticket = game.tickets?.[0]?.numbers || [];
+      console.log("Host ticket:", ticket);
+
+      // Navigate to TambolaRoom page and pass ticket via state
+      navigate(`/game/${roomId}`, { state: { ticket, userId: user.id } });
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to create game");
+    }
+  };
 
   const handleJoin = async () => {
-    if (!gameId) return alert("Enter a valid Game ID");
+    if (!roomId) return alert("Enter a valid Game ID");
+
     try {
-      await API.post(`/game/${gameId}/join`);
-      navigate(`/game/${gameId}`); // go to TambolaRoom page
+      // Call backend to join an existing game
+      const res = await API.post(`/game/join/${roomId}`);
+      const game = res.data.game;
+      console.log(game, "gameeee");
+      if (!game) return alert("Failed to join game");
+
+      // Extract ticket for current user
+      console.log(user, "useer");
+      const myTicketObj = game.tickets.find((t) => t.userId == user.id);
+      const ticket = myTicketObj?.numbers || [];
+      console.log("Joined ticket:", ticket);
+
+      // Navigate to TambolaRoom page, pass ticket via state
+      navigate(`/game/${game.roomId}`, { state: { ticket, userId: user.id } });
     } catch (err) {
       alert(err.response?.data?.error || "Failed to join game");
     }
@@ -74,7 +87,7 @@ const Dashboard = () => {
             <input
               type="text"
               placeholder="Enter Game ID"
-              value={gameId}
+              value={roomId}
               onChange={(e) => setGameId(e.target.value)}
               className="border border-gray-300 px-3 py-2 rounded w-40"
             />
