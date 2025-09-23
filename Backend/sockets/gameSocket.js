@@ -72,7 +72,7 @@ module.exports = (io, socket) => {
     }
   });
 
-  // ------------------ CLAIM PRIZE ------------------
+ // ------------------ CLAIM PRIZE ------------------
 socket.on("claimPrize", async ({ roomId, userId, prize, clickedNumbers }) => {
   const game = await Game.findOne({ roomId });
   if (!game || game.status === "finished") return;
@@ -87,55 +87,76 @@ socket.on("claimPrize", async ({ roomId, userId, prize, clickedNumbers }) => {
   }
 
   const calledSet = new Set(game.numbersCalled);
+  const tNumbers = ticket.numbers;
 
   // --- Determine required numbers for the prize ---
   let requiredNumbers = [];
-  const tNumbers = ticket.numbers;
 
   switch (prize) {
     case "Early Five":
-      requiredNumbers = tNumbers.flat().filter(n => calledSet.has(n)).slice(0, 5);
+      // All numbers on the ticket that are called AND clicked
+      const ticketNumbersFlat = tNumbers.flat().filter(Boolean);
+      const clickedAndCalled = ticketNumbersFlat.filter(
+        n => calledSet.has(n) && clickedNumbers.includes(n)
+      );
+
+      if (clickedAndCalled.length < 5) {
+        socket.emit("prizeError", { prize, msg: "You need at least 5 clicked numbers that are called!" });
+        return;
+      }
+      requiredNumbers = clickedAndCalled.slice(0, 5);
       break;
+
     case "Top Row":
-      requiredNumbers = tNumbers[0].filter(n => calledSet.has(n));
+      requiredNumbers = tNumbers[0].filter(n => n !== null);
       break;
     case "Middle Row":
-      requiredNumbers = tNumbers[1].filter(n => calledSet.has(n));
+      requiredNumbers = tNumbers[1].filter(n => n !== null);
       break;
     case "Bottom Row":
-      requiredNumbers = tNumbers[2].filter(n => calledSet.has(n));
+      requiredNumbers = tNumbers[2].filter(n => n !== null);
       break;
     case "All Corners":
       requiredNumbers = [
-        tNumbers[0][0], tNumbers[0][8],
-        tNumbers[2][0], tNumbers[2][8]
+        tNumbers[0][0],
+        tNumbers[0][8],
+        tNumbers[2][0],
+        tNumbers[2][8],
       ].filter(Boolean);
       break;
     case "Full House":
       requiredNumbers = tNumbers.flat().filter(Boolean);
       break;
+
+    default:
+      socket.emit("prizeError", { prize, msg: "Invalid prize!" });
+      return;
   }
 
-  // --- Validate: all required numbers must be clicked ---
+  // --- Validation: numbers must be called AND clicked ---
+  const allCalled = requiredNumbers.every(n => calledSet.has(n));
   const allClicked = requiredNumbers.every(n => clickedNumbers.includes(n));
-  if (!allClicked) {
-    socket.emit("prizeError", { prize, msg: "You must mark all numbers manually!" });
+
+  if (!allCalled || !allClicked) {
+    socket.emit("prizeError", { prize, msg: "Numbers not called or not marked on your ticket!" });
     return;
   }
 
-  // Mark prize as claimed
+  // --- Mark prize as claimed ---
   ticket.claimedPatterns.push(prize);
   await game.save();
 
   io.to(roomId).emit("prizeClaimed", { userId, prize });
 
-  // Check winner
+  // --- Check winner ---
   if (ticket.claimedPatterns.length === 6) {
     game.status = "finished";
     await game.save();
     io.to(roomId).emit("winnerDeclared", { userId });
   }
 });
+
+
 
 
   // ------------------ DISCONNECT ------------------
