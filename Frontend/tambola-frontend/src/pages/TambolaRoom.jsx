@@ -6,7 +6,6 @@ import Cardboard from "../components/CardBoard";
 import TicketGrid from "../components/TicketGrid";
 import PrizeButtons from "../components/PrizeButton";
 
-
 const SOCKET_URL = "http://localhost:4000"; // adjust if deployed
 const prizes = [
   "Early Five",
@@ -87,7 +86,7 @@ const TambolaRoom = () => {
         game.numbersCalled[game.numbersCalled.length - 1] || null
       );
     });
-
+    
     // When a number is called by host
     socket.on("numberCalled", (number) => {
       setCalledNumbers((prev) => new Set(prev).add(number));
@@ -113,7 +112,7 @@ const TambolaRoom = () => {
 
   // --- Event Handlers ---
   const handleStart = () => {
-    console.log(isHost,roomId,"hosttt")
+    console.log(isHost, roomId, "hosttt");
     if (isHost) socket.emit("startGame", { roomId });
   };
 
@@ -133,8 +132,12 @@ const TambolaRoom = () => {
   };
 
   const handleClaim = (prize) => {
-    socket.emit("claimPrize", { roomId, userId, prize });
-  };
+  // Prepare ticket state: only send clicked numbers
+  const clickedNumbers = ticket.flat().filter(n => n?.clicked).map(n => n.value);
+
+  socket.emit("claimPrize", { roomId, userId, prize, clickedNumbers });
+};
+
 
   // Manual marking of ticket
   const handleTicketClick = (rowIdx, colIdx) => {
@@ -145,6 +148,21 @@ const TambolaRoom = () => {
     newTicket[rowIdx][colIdx] = { ...cell, clicked: !cell.clicked };
     setTicket(newTicket);
   };
+  
+  useEffect(() => {
+      // Winner notification
+      socket.on("winnerDeclared", ({ userId: winnerId }) => {
+        if (winnerId === userId) {
+          alert("🎉 Congratulations! You won the game!");
+        } else {
+          alert(`🏆 Player ${winnerId} has won the game!`);
+        }
+      });
+
+      return () => {
+        socket.off("winnerDeclared");
+      };
+    }, [userId]);
 
   // --- Render ---
   return (
