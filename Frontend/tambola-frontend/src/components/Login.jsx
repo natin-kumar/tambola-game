@@ -14,7 +14,7 @@ const Login = () => {
     try {
       const res = await API.post("/auth/login", { email, password });
       login(res.data);
-      navigate("/dashboard");
+      navigate("/");
     } catch (err) {
       alert(err.response?.data?.error || "Login failed");
     }
